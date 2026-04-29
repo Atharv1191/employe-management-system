@@ -1,6 +1,6 @@
 
 const express = require("express");
-const { clockInOut,getAttendence } = require("../controllers/AttendanceController");
+const { clockInOut,getAttendence } = require("../controllers/attendanceController");
 const { protect } = require("../middelwere/auth");
 
 const router = express.Router()
