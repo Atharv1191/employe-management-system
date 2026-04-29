@@ -2,12 +2,13 @@ const { Inngest } = require("inngest");
 const Attendance = require("../models/Attendance");
 const Employee = require("../models/Employee");
 const LeaveApplication = require("../models/LeaveApplication");
-const sendEmail = require("../configs/nodemiler")
+const sendEmail = require("../configs/nodemiler");
+
 const inngest = new Inngest({ id: "fullstack-ems" });
 
 // Auto checkout for employees
 const autoCheckout = inngest.createFunction(
-    { id: "auto-check-out", trigger: { event: "employee/check-out" } },
+    { id: "auto-check-out", triggers: [{ event: "employee/check-out" }] },
     async ({ event, step }) => {
         const { employeeId, attendanceId } = event.data;
 
@@ -21,11 +22,10 @@ const autoCheckout = inngest.createFunction(
         );
 
         if (!attendance.checkOut) {
-            await step.run("get-employee", () =>
+            const employee = await step.run("get-employee", () =>
                 Employee.findById(employeeId)
             );
 
-            // TODO: send reminder email
             await sendEmail({
                 to: employee.email,
                 subject: "Attendance Reminder: Please Check Out",
@@ -41,7 +41,7 @@ const autoCheckout = inngest.createFunction(
                     <p style="font-size: 16px;">EMS</p>
                 </div>
             `
-            })
+            });
 
             await step.sleepUntil(
                 "wait-for-1-hour",
@@ -67,7 +67,7 @@ const autoCheckout = inngest.createFunction(
 
 // Leave application reminder
 const leaveApplicationReminder = inngest.createFunction(
-    { id: "leave-application-reminder", trigger: { event: "leave/pending" } },
+    { id: "leave-application-reminder", triggers: [{ event: "leave/pending" }] },
     async ({ event, step }) => {
         const { leaveApplicationId } = event.data;
 
@@ -81,31 +81,31 @@ const leaveApplicationReminder = inngest.createFunction(
         );
 
         if (leaveApplication.status === "PENDING") {
-            await step.run("get-employee", () =>
+            const employee = await step.run("get-employee", () =>
                 Employee.findById(leaveApplication.employeeId)
             );
 
-            // TODO: send reminder email to admin
             await sendEmail({
                 to: process.env.ADMIN_EMAIL,
                 subject: "Leave Application Reminder: Action Required",
-                body: `  <div style="max-width: 600px;">
-                <h2>Hi Admin, 👋</h2>
-                <p style="font-size: 16px;">You have a leave application in ${employee.department} today:</p>
-                <p style="font-size: 18px; font-weight: bold; color: #007bff; margin: 8px 0;">${leaveApplication?.startDate?.toLocaleDateString()}</p>
-                <p style="font-size: 16px;">Please make sure to take action on this leave application.</p>
-                <br />
-                <p style="font-size: 16px;">Best Regards,</p>
-                <p style="font-size: 16px;">EMS</p>
-            </div>`
-            })
+                body: `
+                <div style="max-width: 600px;">
+                    <h2>Hi Admin, 👋</h2>
+                    <p style="font-size: 16px;">You have a leave application in ${employee.department} today:</p>
+                    <p style="font-size: 18px; font-weight: bold; color: #007bff; margin: 8px 0;">${leaveApplication?.startDate?.toLocaleDateString()}</p>
+                    <p style="font-size: 16px;">Please make sure to take action on this leave application.</p>
+                    <br />
+                    <p style="font-size: 16px;">Best Regards,</p>
+                    <p style="font-size: 16px;">EMS</p>
+                </div>`
+            });
         }
     }
 );
 
 // Cron: check attendance and email absent employees
 const attendanceReminderCron = inngest.createFunction(
-    { id: "attendance-reminder-cron", trigger: { cron: "0 6 * * *" } },
+    { id: "attendance-reminder-cron", triggers: [{ cron: "0 6 * * *" }] },
     async ({ step }) => {
         const today = await step.run("get-today-date", async () => {
             const startUTC = new Date(
@@ -151,24 +151,24 @@ const attendanceReminderCron = inngest.createFunction(
 
         if (absentEmployees.length > 0) {
             await step.run("send-reminder-emails", async () => {
-                const emailPromises = absentEmployees.map(emp => {
-                    // TODO: send reminder email to each absent employee
+                const emailPromises = absentEmployees.map(emp =>
                     sendEmail({
                         to: emp.email,
                         subject: "Attendance Reminder: Please Check In",
-                        body: `  <div style="max-width: 600px; font-family: Arial, sans-serif;">
-                                <h2>Hi ${emp.firstName}, 👋</h2>
-                                <p style="font-size: 16px;">We noticed you haven't marked your attendance yet today.</p>
-                                <p style="font-size: 16px;">The deadline was <strong>11:30 AM</strong> and your attendance is still missing.</p>
-                                <p style="font-size: 16px;">Please check in as soon as possible or contact your admin if you're facing any issues.</p>
-                                <br />
-                                <p style="font-size: 14px; color: #666;">Department: ${emp.department}</p>
-                                <br />
-                                <p style="font-size: 16px;">Best Regards,</p>
-                                <p style="font-size: 16px;"><strong>QuickEMS</strong></p>
-                            </div>`
+                        body: `
+                        <div style="max-width: 600px; font-family: Arial, sans-serif;">
+                            <h2>Hi ${emp.firstName}, 👋</h2>
+                            <p style="font-size: 16px;">We noticed you haven't marked your attendance yet today.</p>
+                            <p style="font-size: 16px;">The deadline was <strong>11:30 AM</strong> and your attendance is still missing.</p>
+                            <p style="font-size: 16px;">Please check in as soon as possible or contact your admin if you're facing any issues.</p>
+                            <br />
+                            <p style="font-size: 14px; color: #666;">Department: ${emp.department}</p>
+                            <br />
+                            <p style="font-size: 16px;">Best Regards,</p>
+                            <p style="font-size: 16px;"><strong>QuickEMS</strong></p>
+                        </div>`
                     })
-                });
+                );
                 await Promise.all(emailPromises);
             });
         }
