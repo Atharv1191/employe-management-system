@@ -1,5 +1,7 @@
 import { CalendarDaysIcon, FileText, Loader2, Send, X } from 'lucide-react'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import api from '../../api/axios'
+import toast from 'react-hot-toast'
 
 const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
     const [loading, setLoading] = useState(false)
@@ -9,8 +11,25 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
 
     const minDate = tomorrow.toISOString().split('T')[0];
 
+    // ✅ Fix: modal open hone pe loading reset karo
+    useEffect(() => {
+        if (open) setLoading(false)
+    }, [open])
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setLoading(true)
+        const formData = new FormData(e.currentTarget)
+        const data = Object.fromEntries(formData.entries())
+        try {
+            await api.post('/leave', data)
+            onSuccess();
+            onClose()
+        } catch (error) {
+            toast.error(error.message)
+        } finally {
+            setLoading(false)
+        }
     }
 
     if (!open) return null
@@ -44,31 +63,27 @@ const ApplyLeaveModal = ({ open, onClose, onSuccess }) => {
                         </select>
                     </div>
 
-
                     {/* duration */}
                     <div>
                         <label className='flex items-center gap-2 text-sm font-medium text-slate-700 mb-2'>
                             <CalendarDaysIcon className='w-4 h-4 text-slate-400' />
                             Duration
                         </label>
-                        <div className='grid grd-cols-2 gap-4'>
+                        <div className='grid grid-cols-2 gap-4'>
                             <div>
                                 <span className='block text-xs text-slate-400 mb-1'>From</span>
                                 <input type="date" name='startDate' required min={minDate} />
-
                             </div>
                             <div>
                                 <span className='block text-xs text-slate-400 mb-1'>To</span>
-                                <input type="date" name='endtDate' required min={minDate} />
-
+                                <input type="date" name='endDate' required min={minDate} />
                             </div>
-
                         </div>
                     </div>
+
                     {/* reasons */}
                     <div>
                         <label className='text-sm font-medium text-slate-700 mb-2 block'>
-
                             Reason
                         </label>
                         <textarea name="reason" required rows={3} placeholder='Briefly describe why you need this leave...' />
