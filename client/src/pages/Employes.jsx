@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react"
-import { dummyEmployeeData, DEPARTMENTS } from "../assets/assets"
+import { DEPARTMENTS } from "../assets/assets"
 import { Plus, Search, X } from "lucide-react"
 import EmployeeCard from "../components/EmployeeCard"
 import EmployeeForm from "../components/EmployeeForm"
+import api from "../api/axios"
 
 const Employes = () => {
   const [employes, setEmployes] = useState([])
@@ -13,17 +14,17 @@ const Employes = () => {
   const [showCreateEditModal, setShowCreateEditModal] = useState(false)
 
   const fetchEmployes = useCallback(async () => {
-    setLoading(true)
+    try {
+      const url = selecteDepartment ? `/employees?department=${selecteDepartment}` : "/employees"; // ✅ Fix 1: typo fix
+      const res = await api.get(url)
+      setEmployes(res.data.result) // ✅ Fix 2 & 3: setEmployes aur res.data.result
 
-    const filteredData = dummyEmployeeData.filter((emp) =>
-      selecteDepartment ? emp.department === selecteDepartment : true
-    )
+    } catch (error) {
+      console.error("failed to fetch data")
 
-    setEmployes(filteredData)
-
-    setTimeout(() => {
+    } finally {
       setLoading(false)
-    }, 500)
+    }
 
   }, [selecteDepartment])
 
@@ -115,8 +116,8 @@ const Employes = () => {
           onClick={() => setShowCreateEditModal(false)}
         >
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl my-8 animate-fade-in"
-               onClick={(e) => e.stopPropagation()}>
-            
+            onClick={(e) => e.stopPropagation()}>
+
             <div className="flex items-center justify-between p-6 pb-0">
               <div>
                 <h2 className="text-lg font-semibold text-slate-900">Add new Employee</h2>

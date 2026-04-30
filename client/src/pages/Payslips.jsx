@@ -3,27 +3,39 @@ import { dummyEmployeeData, dummyPayslipData } from "../assets/assets";
 import Loading from "../components/Loading";
 import PayslipsList from "../components/Payslips/PayslipsList";
 import GeneratePayslipsForm from "../components/Payslips/GeneratePayslipsForm";
+import { useAuth } from "../context/AuthContext";
+import api from "../api/axios";
+import toast from "react-hot-toast";
 
 
 const Payslips = () => {
   const [payslips, setPaySlips] = useState([])
   const [employees, setEmployees] = useState([])
   const [loading, setLoading] = useState(true);
-  const isAdmin = true;
+  const {user} = useAuth()
+  const isAdmin = user?.role === "ADMIN"
 
   const fetchPaySlips = useCallback(async () => {
-    setPaySlips(dummyPayslipData)
-    setTimeout(() => {
-      setLoading(false)
-    }, 1000)
+  try{
+    const res = await api.get('/payslips')
+    setPaySlips(res.data.data || [])
+  } catch(error){
+    toast.error(error?.response?.data?.error || error?.message)
+
+  } finally{
+    setLoading(false)
+  }
   }, [])
 
   useEffect(() => {
     fetchPaySlips()
   }, [fetchPaySlips])
   useEffect(() => {
-    if (isAdmin) setEmployees(dummyEmployeeData)
-  }, [isAdmin])
+    if (isAdmin) api.get('/employees')
+        .then((res) => setEmployees(res.data.result.filter((e) => !e.isDeleted)))
+        .catch(() => {})
+}, [isAdmin])
+ 
   if (loading) return <Loading />
   return (
     <div className="animate-fade-in">
