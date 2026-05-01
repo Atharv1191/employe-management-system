@@ -38,7 +38,7 @@ const EmployeeForm = ({ initialData, onSuccess, onCancel }) => {
         <form className='space-y-6 max-w-3xl animate-fade-in' onSubmit={handleSubmit}>
 
             {/* personal information */}
-            <div className='card sm:p-6'>
+            <div className='card p-4 sm:p-6'>
                 <h3 className='font-medium mb-6 pb-4 border-b border-slate-100'>Personal information</h3>
 
                 <div className='grid grid-cols-1 sm:grid-cols-2 gap-5 text-sm text-slate-700'>
